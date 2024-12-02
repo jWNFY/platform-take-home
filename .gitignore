@@ -2,3 +2,7 @@
 build
 **/.terraform
 **/terraform.tfstate
+
+.vscode
+*.pb.*go
+github.com

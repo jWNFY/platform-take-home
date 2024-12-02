@@ -181,10 +181,13 @@ devcontainer-test-full: devcontainer-down test-devcontainer-generic
 	@echo "Full devcontainer test completed!"
 
 
-#######################
-# Kubernetes Local Setup ####
-#######################
+#########################
+# Local K8s Deployment ##
+#########################
 
+# Variables for local deployment
+IMAGE_NAME := platform-app
+IMAGE_TAG := latest
 K8S_LOCAL_CLUSTER := platform-dev-local
 
 k8s-local-prereq:
@@ -194,26 +197,8 @@ k8s-local-prereq:
 k8s-local-setup: k8s-local-prereq
 	./ci/scripts/local/setup-local-k8s.sh
 
-k8s-local-delete:
-	k3d cluster delete $(K8S_LOCAL_CLUSTER)
-
 k8s-local-switch:
 	kubectl config use-context k3d-$(K8S_LOCAL_CLUSTER)
-
-k8s-local-status: k8s-local-switch
-	k3d cluster list
-	kubectl get nodes
-	kubectl get pods --all-namespaces
-
-
-#########################
-# Local K8s Deployment ##
-#########################
-
-# Variables for local deployment
-IMAGE_NAME := platform-app
-IMAGE_TAG := latest
-K8S_LOCAL_CLUSTER := platform-dev-local  # Make sure this matches your cluster name
 
 # Build and load Docker image into k3d
 k8s-local-build:

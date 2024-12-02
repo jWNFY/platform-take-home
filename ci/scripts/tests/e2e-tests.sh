@@ -237,6 +237,7 @@ run_with_port_forward() {
     fi
 }
 
+# Function to check database initialization
 check_db_init() {
     echo "Checking database initialization..."
     kubectl exec -n ${NAMESPACE} deployment/db -- env PGPASSWORD=postgres \
@@ -249,6 +250,7 @@ check_db_init() {
 # Run all tests
 run_all_tests() {
     test_health || exit 1
+    check_db_init || exit 1
     test_http || exit 1
     test_grpc || exit 1
     test_create_item || exit 1

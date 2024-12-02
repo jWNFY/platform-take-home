@@ -6,3 +6,5 @@ build
 .vscode
 *.pb.*go
 github.com
+
+bin/

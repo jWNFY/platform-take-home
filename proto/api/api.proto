@@ -8,21 +8,17 @@ option go_package = "github.com/skip-mev/platform-take-home/api/types";
 
 service TakeHomeService {
   rpc GetItems(EmptyRequest) returns (GetItemsResponse) {
-    option (google.api.http) = {
-      get: "/items"
-    };
-  };
+    option (google.api.http) = {get: "/items"};
+  }
   rpc GetItem(GetItemRequest) returns (GetItemResponse) {
-    option (google.api.http) = {
-      get: "/items/{id}"
-    };
-  };
+    option (google.api.http) = {get: "/items/{id}"};
+  }
   rpc CreateItem(CreateItemRequest) returns (CreateItemResponse) {
     option (google.api.http) = {
       post: "/items"
       body: "*"
     };
-  };
+  }
 }
 
 message EmptyRequest {}

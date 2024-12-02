@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: ci/Dockerfile
+    ports:
+      - "8080:8080"
+      - "9008:9008"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=platform
+      - POSTGRES_DSN=postgresql://postgres:postgres@db:5432/platform?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  db:
+    image: postgres:16-bullseye
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # Changed to avoid conflict with devcontainer DB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: ci_app-network
+    external: true
+
+volumes:
+  postgres_data:

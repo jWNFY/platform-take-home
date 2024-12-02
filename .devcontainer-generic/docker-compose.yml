@@ -1,0 +1,46 @@
+services:
+  devcontainer:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../:/workspace:cached
+      - go-cache:/go
+      - ~/.gitconfig:/home/vscode/.gitconfig
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: sleep infinity
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=platform
+      - POSTGRES_DSN=postgresql://postgres:postgres@db:5432/platform?sslmode=disable
+    working_dir: /workspace
+    networks:
+      - app-network
+      - ci_app-network
+    entrypoint: ["/usr/local/bin/docker-init.sh"]
+    privileged: true
+
+  db:
+    image: postgres:16-bullseye
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=platform
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    ports:
+      - "5432:5432"
+
+networks:
+  app-network:
+    driver: bridge
+  ci_app-network:
+    name: ci_app-network
+    external: true
+
+volumes:
+  go-cache:
+  postgres-data:

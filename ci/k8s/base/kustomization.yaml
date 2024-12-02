@@ -1,0 +1,15 @@
+# This file is used to define the resources that will be deployed to the cluster when running kubectl apply -k . command.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - app.yaml
+  - database.yaml
+  - service.yaml
+
+images:
+  - name: platform-app
+    newName: platform-app
+    newTag: latest
+
+namespace: platform

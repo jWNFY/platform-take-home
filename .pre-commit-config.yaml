@@ -1,0 +1,26 @@
+repos:
+  - repo: local
+    hooks:
+      - id: proto-gen
+        name: Proto Generation
+        entry: make proto
+        language: system
+        pass_filenames: false
+        
+      - id: go-fmt
+        name: Go Format
+        entry: make format
+        language: system
+        pass_filenames: false
+        
+      - id: go-lint
+        name: Go Lint
+        entry: make lint
+        language: system
+        pass_filenames: false
+        
+      - id: go-test
+        name: Go Test
+        entry: make test
+        language: system
+        pass_filenames: false

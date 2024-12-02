@@ -1,0 +1,12 @@
+{
+  "name": "Skip Labs PTH Dev Container - VS Code",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+
+  "postCreateCommand": "make dev-setup",
+  
+  "remoteUser": "vscode",
+  
+  "overrideCommand": false
+}

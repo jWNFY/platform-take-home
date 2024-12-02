@@ -1,0 +1,116 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: '*'
+  pull_request:
+    branches: '*'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23.2'
+
+    - name: Install Dependencies
+      run: make dev-setup
+
+    - name: Ensure Code Formatting
+      run: make format
+
+    - name: Run Linters
+      run: make lint
+
+    - name: Run Tests
+      run: make test
+
+    - name: Build the Application
+      run: make build
+
+    - name: Check Docker Environment
+      run: |
+        make docker-up
+        make test-endpoints
+        make docker-down
+
+    - name: Set up k3d
+      run: |
+        curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+        make k8s-local-setup
+
+    - name: Deploy to k3d
+      run: make k8s-local-deploy
+
+    - name: Run Kubernetes Tests
+      run: make k8s-test-local
+
+    - name: Clean up k3d
+      run: make k8s-local-delete
+
+    - name: Build and push Docker image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        docker build -t ${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }} -f ci/Dockerfile .
+        docker push ${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy_preview:
+    needs: build-and-test
+    if: github.event_name == 'pull_request'
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+  
+    - name: Update kubeconfig for EKS
+      run: |
+        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER }}
+    
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.21.0'
+
+    - name: Deploy to preview environment
+      run: |
+        make k8s-env-setup
+        make k8s-env-deploy
+        make k8s-env-url
+        make k8s-env-logs
+
+  deploy:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Update kubeconfig for EKS
+      run: |
+        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER }}
+    - name: Deploy to k8s
+      run: |
+        # Update image tag in deployment
+        cd ci/k8s/base
+        kustomize edit set image platform-app=${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}
+        kubectl apply -k .

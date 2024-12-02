@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: platform-app
+  template:
+    metadata:
+      labels:
+        app: platform-app
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: postgres:16-bullseye
+        command: ['sh', '-c', 
+          'until pg_isready -h db -p 5432 -U postgres; do echo waiting for database; sleep 2; done;']
+        env:
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+      - name: init-db
+        image: platform-app:latest
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          echo "Initializing database..."
+          /app/main migrate
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+        - name: POSTGRES_DB
+          value: "platform"
+        - name: POSTGRES_DSN
+          value: "postgresql://postgres:postgres@db:5432/platform?sslmode=disable"
+      containers:
+      - name: app
+        image: platform-app:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9008
+          name: grpc
+        env:
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+        - name: POSTGRES_DB
+          value: "platform"
+        - name: POSTGRES_DSN
+          value: "postgresql://postgres:postgres@db:5432/platform?sslmode=disable"
+        - name: HTTP_PORT
+          value: "8080"
+        - name: GRPC_PORT
+          value: "9008"
+        - name: DEBUG
+          value: "true"
+        - name: LOG_LEVEL
+          value: "debug"
